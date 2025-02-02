@@ -1,0 +1,618 @@
+﻿@page "/Strategies"
+
+<div style="display: flex; justify-content: space-between">
+	<h3 style="font-weight: bold">Strategies</h3>
+	<span class="sticky-right mr-3">
+		<RadzenButton Shade="Shade.Lighter" Text="Load" Icon="input" Click="@LoadProfile" IsBusy="@isBusy" class="ml-1" />
+		<RadzenButton Shade="Shade.Lighter" Text="Save" Icon="save" Click="@SaveProfile" IsBusy="@isBusy" class="ml-1" />
+		<RadzenButton Shade="Shade.Lighter" Icon="arrow_back_ios_new" ButtonStyle="ButtonStyle.Secondary" Text="  " Click="@BackScreenn" />
+		<RadzenButton Icon="arrow_forward_ios" ButtonStyle="ButtonStyle.Primary" Text="  " Click="@NextScreen" Disabled="Utility.SubmitDisabledState" />
+	</span>
+
+</div>
+
+@using FinancialStrategyCalculator.Data
+
+@inject IJSRuntime JSRuntime
+@inject FinancialDataService financialDataService
+@inject DialogService DialogService
+@inject NavigationManager Navigation
+@inject TooltipService tooltipService
+
+<style>
+	/* Overriding Radzen Styles for contributionDataGrid */
+	/* Will not work if addded to app.css */
+	/* For the data cells */
+	.rz-grid-table .rz-data-row td:not(:last-child) {
+		border-right: var(--rz-grid-frozen-cell-border);
+		border-right-width: 1px;
+		border-right-style: solid;
+	}
+
+	.rz-data-grid {
+		--rz-grid-header-text-transform: none;
+		--rz-grid-header-font-size: 8; /* Set this value to a desired font size */
+		--rz-grid-header-background-color: #F2F2F2;
+	}
+
+	th.rz-text-align-left {
+		text-align: center !important;
+	}
+
+</style>
+
+<div id="strategies" class="container-fluid" style="margin-left: 0;">
+	<EditForm Model="FinancialDataService.FinancialStrategyModel" OnValidSubmit="HandleValidSubmit">
+		<DataAnnotationsValidator />
+		<ValidationSummary />
+
+		<div class="row">
+			<div class="col-md-12">
+				<hr class="table-divider" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12 body-font-large-bold">
+				Income, Insurance & Investment Ratios
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-2">
+				<RadzenLabel for="smartratios" class="body-font-large-normal padding-left-20">Smart Ratios:</RadzenLabel>
+			</div>
+			<div class="col-md-10">
+				<RadzenRadioButtonList id="smartratios" @bind-Value=FinancialDataService.FinancialStrategyModel.IncomeInsuranceInvestmentRatios TValue="int" Orientation=Orientation.Vertical class="mb-5">
+					<Items>
+						<RadzenRadioButtonListItem MouseEnter="@(args => ShowTooltip(args, "smartratios1"))" Text="Calculate based on Retirement Pension Payout for Investment Ratio" Value="1" />
+						<RadzenRadioButtonListItem MouseEnter="@(args => ShowTooltip(args, "smartratios2"))" Text="Calculate based on Annual Income for Investment Ratio" Value="2" />
+						<RadzenRadioButtonListItem MouseEnter="@(args => ShowTooltip(args, "smartratios3"))" Text="Calculate based on Insurance for Investment Ratio" Value="3" />
+					</Items>
+				</RadzenRadioButtonList>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12">
+				<hr class="table-divider-small" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12 body-font-large-bold">
+				Free Insurance (After Term)
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="continueinvestment" class="continueinvestment body-font-large-normal padding-left-20">Continue Investment After Insurance Term Ends?:</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenCheckBox id="continueinvestment" class="controlstretch" @bind-Value="FinancialDataService.FinancialStrategyModel.ContinueInvestment" Change="@((bool value) => HandleContinueInvestmentCheckboxChange(value))" />
+			</div>
+		</div>
+		@if (FinancialDataService.FinancialStrategyModel.ContinueInvestment)
+		{
+			<div class="row">
+				<div class="col-md-7">
+					<RadzenLabel for="insuranceplan" class="body-font-large-normal padding-left-20" MouseEnter="@(args => ShowTooltip(args, "insuranceplan"))">After Term Insurance (Exchange) Plan</RadzenLabel>
+				</div>
+				<div class="col-md-5">
+					<InputSelect id="insuranceplan" class="controlstretch" @bind-Value="FinancialDataService.FinancialStrategyModel.InsurancePlan">
+						<option value="1">Annual Increasing Premium Term to Age 100 Plan</option>
+						<option value="2">Decreasing Term to Age 100 Plan</option>
+						<option value="3">Ten (10) Year Fixed Then Decreasing Term to Age 100 Plan</option>
+					</InputSelect>
+				</div>
+			</div>
+
+			<div class="row">
+				<div class="col-md-6">
+					<RadzenLabel for="insurancetype" class="body-font-medium-bold padding-left-40">DRT Insurance Type:</RadzenLabel>
+				</div>
+				<div class="col-md-1">
+					<RadzenCheckBox id="hasfileloaded" class="align-middle" @bind-Value="FinancialDataService.FinancialStrategyModel.HasDRTFileLoaded" Change="@((bool value) => RevertChangeDRT(value))" />
+				</div>
+				<div class="col-md-5">
+					<InputSelect id="insurancetype" class="controlstretch" @bind-Value="FinancialDataService.FinancialStrategyModel.InsuranceType">
+						<option value="1">Preferred Plus & Preferred</option>
+						<option value="2">Select and NTU (Not Taken Up)</option>
+						<option value="3">TU (Taken Up)</option>
+					</InputSelect>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-6">
+					<RadzenLabel for="insurancetype" class="body-font-medium-bold padding-left-40">ART/YRT Insurance Type:</RadzenLabel>
+				</div>
+				<div class="col-md-1">
+					<RadzenCheckBox id="hasfileloaded" @bind-Value="FinancialDataService.FinancialStrategyModel.HasARTYRTFileLoaded" Change="@((bool value) => RevertChangeARTYRT(value))" />
+				</div>
+				<div class="col-md-5">
+					<InputSelect id="insurancetype" class="controlstretch" @bind-Value="FinancialDataService.FinancialStrategyModel.InsuranceType">
+						<option value="1">Preferred Plus & Preferred</option>
+						<option value="2">Select and NTU (Not Taken Up)</option>
+						<option value="3">TU (Taken Up)</option>
+					</InputSelect>
+				</div>
+			</div>
+
+			<div class="row">
+				<div class="col-md-7">
+					<label for="investmentpayinsurance" class="body-font-large-normal padding-left-20">Use Investment to Pay After-Term ART/YRT Rates (FREE Insurance)?:</label>
+				</div>
+				<div class="col-md-5">
+					<RadzenCheckBox id="investmentpayinsurance" class="controlstretch" @bind-Value="FinancialDataService.FinancialStrategyModel.InvestmentPayInsurance" Change="@((bool value) => EnableOrDisableRefundPremium(value))" Disabled="!FinancialDataService.FinancialStrategyModel.HasARTYRTFileLoaded" />
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-7">
+					<label for="refundpremium" class="body-font-large-normal padding-left-20">Refund Term Premiums?:</label>
+				</div>
+				<div class="col-md-5">
+					<RadzenCheckBox id="refundpremium" @bind-Value="FinancialDataService.FinancialStrategyModel.RefundPremiums" Disabled="!FinancialDataService.FinancialStrategyModel.InvestmentPayInsurance || !FinancialDataService.FinancialStrategyModel.HasARTYRTFileLoaded" />
+				</div>
+			</div>
+		}
+		<div class="row">
+			<div class="col-md-12">
+				<hr class="table-divider-small" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12 body-font-large-bold">
+				Tax Shielded Investment Contribution Room
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="hasTFSARRSPFHSAfileloaded" class="body-font-large-normal padding-left-20">TFSA/RRSP/FHSA Table Loaded:</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenCheckBox id="hasTFSARRSPFHSAfileloaded" class="controlstretch" @bind-Value="FinancialDataService.FinancialStrategyModel.HasTFSARRSPFHSAFileLoaded" Change="@((bool value) => RevertChangeTFSARRSPFHSA(value))" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="annualincome" class="body-font-large-normal padding-left-20">Estimated Annual Income ($):</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="annualincome" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value="FinancialDataService.FinancialStrategyModel.AnnualIncome" Min="0" Change="@AnnualIncomeChange" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<RadzenLabel for="annualcpi" class="body-font-large-normal padding-left-20" MouseEnter="@(args => ShowTooltip(args, "incomecpi"))">Estimated Annual Income Percentage Increase (%):</RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="annualcpi" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Center" @bind-Value="FinancialDataService.FinancialStrategyModel.AnnualIncomePercentageIncrease" Min="0" Max="100" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12">
+				<hr class="table-divider-smaller" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12 body-font-large-bold padding-left-20">
+				Bank & Dump Strategy
+			</div>
+		</div>
+		@if (!advancedContributionsVisibility)
+		{
+			<div class="row">
+				<div class="col-md-12 body-font-large-bold padding-left-40">
+					Simple:
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-7">
+					<RadzenLabel id="tooltipTarget" class="body-font-medium-normal padding-left-60" Text="Minimum Amount to Bank in TFSA before moving RRSP/FHSA ($)" MouseEnter="@(args => ShowTooltip(args, "banktotfsa"))" />
+				</div>
+				<div class="col-md-5">
+					<RadzenNumeric id="amountotbankinftfsa" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value="FinancialDataService.FinancialStrategyModel.AmountToBankInTFSA" Min="@((FinancialDataService.FinancialStrategyModel.AnnualIncome * 15) / 100)" Max="@Math.Min(FinancialDataService.FinancialStrategyModel.AnnualIncome, 100000)" />
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-7">
+					<RadzenLabel for="strategiccontribution" class="body-font-medium-normal padding-left-60" Text="Number of Times to (Bank in TFSA) and Dump to RRSP:" MouseEnter="@(args => ShowTooltip(args, "strategiccontribution"))" />
+				</div>
+				<div class="col-md-5">
+					<RadzenNumeric id="strategiccontribution" class="controlstretch" TValue="int" TextAlign="TextAlign.Center" @bind-Value="FinancialDataService.FinancialStrategyModel.NumberOfTimesToBank" Min="0" Max="100" />
+				</div>
+			</div>
+		}
+		<div class="row">
+			<div class="col-md-12 body-font-large-bold padding-left-40">
+				Advanced:
+				<span>
+					<RadzenCheckBox id="advancedcontributions" class="controlstretch" @bind-Value="advancedContributionsVisibility" />
+				</span>
+			</div>
+		</div>
+		@if (advancedContributionsVisibility)
+		{
+			<div class="row">
+				<div class="col-md-12 d-flex justify-content-between mb-2 padding-left-70">
+					<RadzenButton ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.ExtraSmall" Icon="add_circle_outline" Text="Add Entry" Click="@InsertAsync" />
+				</div>
+				<div class="col-md-12 padding-left-70">
+					<RadzenDataGrid id="bankNdumpDataGrid" @ref="bankNdumpChangesGrid" EditMode="DataGridEditMode.Single" TItem="BankAndDumpChanges" Data="@bankNdumpChangesList" EditRow="@editingItem" Style="margin-bottom: 10px;">
+						<Columns>
+							<RadzenDataGridColumn TItem="BankAndDumpChanges">
+								<HeaderTemplate>
+									<span style="white-space: normal; text-align: center; font-weight: bold;">
+										Controls
+									</span>
+								</HeaderTemplate>
+								<Template Context="changes">
+									<RadzenButton Size="ButtonSize.ExtraSmall" Icon="edit" Text="Edit" Click="@(() => EditAsync(changes))" />
+									<RadzenButton Size="ButtonSize.ExtraSmall" Icon="delete" Text="Delete" Click="@(() => DeleteAsync(changes))" />
+								</Template>
+								<EditTemplate Context="changes">
+									<RadzenButton Shade="Shade.Darker" Size="ButtonSize.ExtraSmall" Icon="save" Text="Save" Click="@(() => UpdateAsync(changes))" />
+									<RadzenButton Shade="Shade.Darker" Size="ButtonSize.ExtraSmall" Icon="cancel" Text="Cancel" Click="@(() => CancelAsync(changes))" />
+								</EditTemplate>
+							</RadzenDataGridColumn>
+							<RadzenDataGridColumn TItem="BankAndDumpChanges" Property="BankAndDumpAmount" HeaderCssClass="rz-text-align-center">
+								<HeaderTemplate>
+									<span class="body-font-large-bold" style="white-space: normal;">
+										Amount to Bank & Dump
+									</span>
+								</HeaderTemplate>
+								<Template Context="changes">
+									<div style="text-align: right; font-size: medium;">
+										@changes.BankAndDumpAmount.ToString("N2")
+									</div>
+								</Template>
+								<EditTemplate Context="changes">
+									<RadzenNumeric @bind-Value="changes.BankAndDumpAmount" Format="#,##0.00" Min="0" />
+								</EditTemplate>
+							</RadzenDataGridColumn>
+
+							<RadzenDataGridColumn TItem="BankAndDumpChanges" Property="AgeToBankAndDump" HeaderCssClass="rz-text-align-center">
+								<HeaderTemplate>
+									<span class="body-font-large-bold" style="white-space: normal;">
+										Ages to Bank & Dump
+									</span>
+								</HeaderTemplate>
+								<Template Context="changes">
+									<div style="text-align: center; font-size: medium;">
+										@changes.AgeToBankAndDump
+									</div>
+								</Template>
+								<EditTemplate Context="changes">
+									<RadzenNumeric @bind-Value="changes.AgeToBankAndDump" Min="0"></RadzenNumeric>
+								</EditTemplate>
+							</RadzenDataGridColumn>
+						</Columns>
+					</RadzenDataGrid>
+				</div>
+			</div>
+		}
+		else
+		{
+			<div class="row">
+				<div class="col-md-12 padding-left-80">
+					<i>Advanced Contributions Not Enabled</i>
+				</div>
+			</div>
+		}
+		<div class="row">
+			<div class="col-md-12">
+				<hr class="table-divider-smaller" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="withdrawhbpfhsa" class="body-font-large-normal padding-left-20">Amount to Withdraw (HBP/FHSA) ($):</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="withdrawhbpfhsa" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value="FinancialDataService.FinancialStrategyModel.WithdrawHBPFHSA" Min="0" Max="75000" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="taxreturntotfsa" class="body-font-large-normal padding-left-20">Potential Tax Return to Add Back to TFSA After (HBP/FHSA) Withdrawal ($):</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="taxreturntotfsa" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value="FinancialDataService.FinancialStrategyModel.TaxReturnToTFSA" Min="0" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<RadzenLabel for="agetowithdraw" class="body-font-large-normal padding-left-20">Age to withdraw HBP/FHSA:</RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="agetowithdraw" class="controlstretch" TValue="int" TextAlign="TextAlign.Center" @bind-Value="FinancialDataService.FinancialStrategyModel.AgeToWithdrawHBPFHSA" Min="18" Max="99" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<RadzenLabel for="strategiccontributiontype" class="body-font-large-normal padding-left-20" MouseEnter=@(args=> ShowTooltip(args, "strategiccontributiontype"))>Strategic Contribution Type:</RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenDropDown id="strategiccontributiontype" class="controlstretch" Style="text-align: center;" TValue="int" Data="@strategicContributionTypes" TextProperty="Text" ValueProperty="Id" Value="1" Change="@OnChangeStrategicContributionType" />
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="col-md-7">
+				<label for="rrsp" class="body-font-large-normal padding-left-20">Starting RRSP Unused Contribution Room ($):</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="rrsp" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value="FinancialDataService.FinancialStrategyModel.RRSPStartingContributionRoom" Min="0" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="tfsa" class="body-font-large-normal padding-left-20">Starting TFSA Remaining Contribution Room ($):</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="tfsa" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value="FinancialDataService.FinancialStrategyModel.TFSAStartingContributionRoom" Min="0" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="fhsa" class="body-font-large-normal padding-left-20">Starting FHSA RemainingContribution Room ($):</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="fhsa" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value="FinancialDataService.FinancialStrategyModel.FHSAStartingContributionRoom" Min="0" />
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="col-md-7">
+				<label for="rrsp" class="body-font-large-normal padding-left-20">Annual RRSP Unused Contribution Room in Percent (%):</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="rrsp" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Center" @bind-Value="FinancialDataService.FinancialStrategyModel.RRSPRemainingContributionRoomPercentage" Min="0" Max="18" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="tfsa" class="body-font-large-normal padding-left-20">Annual TFSA Remaining Contribution Room for Investments ($):</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="tfsa" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value="FinancialDataService.FinancialStrategyModel.TFSARemainingContributionRoom" Min="0" Max="40000" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="fhsa" class="body-font-large-normal padding-left-20">Annual FHSA RemainingContribution Room for Investments ($):</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="fhsa" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value="FinancialDataService.FinancialStrategyModel.FHSARemainingContributionRoom" Min="0" />
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="col-md-12">
+				<hr class="table-divider-small" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12 body-font-large-bold">
+				RRIF
+			</div>
+		</div>
+		<div class="row mb-2">
+			<div class="col-md-7">
+				<RadzenLabel for="movetorrif" class="body-font-large-normal padding-left-20" MouseEnter="@(args => ShowTooltip(args, "movetorrif"))">Age to Move to RRIF (Change to Low Risk Fixed Income):</RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="movetorrif" class="controlstretch" TValue="int" TextAlign="TextAlign.Center" @bind-Value=@FinancialDataService.FinancialStrategyModel.AgeToMoveToRRIF Min="18" Max="71" />
+			</div>
+		</div>
+		<div class="row mb-2">
+			<div class="col-md-7">
+				<label for="rrifrate" class="body-font-large-normal padding-left-20">RRIF Rate (This overrides Low, Average, High with a Single RRIF Rate)($):</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="rrifrate" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Center" @bind-Value=@FinancialDataService.FinancialStrategyModel.RRIFRate Min="0" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<RadzenLabel for="agetostartpayout" class="body-font-large-normal padding-left-20" MouseEnter=@(args=> ShowTooltip(args, "startpayout"))>Age to Start Annual Investment Payout:<span style="color: blue">++</span></RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="agetostartpayout" class="controlstretch" TValue="int" TextAlign="TextAlign.Center" @bind-Value=@FinancialDataService.FinancialStrategyModel.AgeToStartPayouts Min="18" />
+			</div>
+		</div>
+		<div class="row mb-2">
+			<div class="col-md-7">
+				<label for="projectedretirementincome" class="body-font-large-bold padding-left-20">Projected Annual Payout During Retirement ($@((FinancialDataService.FinancialStrategyModel.ProjectedAnnualRetirementIncome / 12).ToString("N2") + "/Month"))($):</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="projectedretirementincome" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value=@FinancialDataService.FinancialStrategyModel.ProjectedAnnualRetirementIncome Min="0" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<RadzenLabel for="investmenttargetage" class="body-font-large-normal padding-left-20" MouseEnter=@(args=> ShowTooltip(args, "startpayout"))>Life Expectancy Age:</RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="investmenttargetage" class="controlstretch" TValue="int" TextAlign="TextAlign.Center" @bind-Value=@FinancialDataService.FinancialStrategyModel.AgeToEndInvestment Min="18" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12">
+				<hr class="table-divider-small" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12 body-font-large-bold">
+				CPP & OAS
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="cpptable" class="body-font-large-normal padding-left-20">CPP Contribution Table Loaded:</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenCheckBox id="cpptable" class="controlstretch" @bind-Value="FinancialDataService.FinancialStrategyModel.HasCPPFileLoaded" ReadOnly="true" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="cpptable" class="body-font-large-normal padding-left-20">CPP Benefits Site Data Loaded:</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenCheckBox id="cpptable" class="controlstretch" @bind-Value="FinancialDataService.FinancialStrategyModel.HasCPPBenefitsSiteLoaded" ReadOnly="true" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="cpptable" class="body-font-large-normal padding-left-20">CPP Limits Formula Site Data Loaded:</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenCheckBox id="cpptable" class="controlstretch" @bind-Value="FinancialDataService.FinancialStrategyModel.HasCPPIncDecFormulaSiteLoaded" ReadOnly="true" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="cpptable" class="body-font-large-normal padding-left-20">OAS Benefits Site Data Loaded:</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenCheckBox id="cpptable" class="controlstretch" @bind-Value="FinancialDataService.FinancialStrategyModel.HasOASBenefitsSiteLoaded" ReadOnly="true" />
+			</div>
+		</div>
+		<div class="row mb-2">
+			<div class="col-md-7">
+				<RadzenLabel for="cppdeductionpercentage" class="body-font-large-normal padding-left-20">CPP Percentage to be deducted from Salary (@((FinancialDataService.FinancialStrategyModel.CPPDeductionPercent / 2).ToString("N2"))% for Employees)(%):</RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="cppdeductionpercentage" class="controlstretch" TValue="decimal" TextAlign="TextAlign.Center" @bind-Value=@FinancialDataService.FinancialStrategyModel.CPPDeductionPercent Min="1" Max="100" ReadOnly="true" Style="background: #EDF1F7" />
+			</div>
+		</div>
+		<div class="row mb-2">
+			<div class="col-md-7">
+				<RadzenLabel for="cppmaxcontribution" class="body-font-large-normal padding-left-20">Annual Maximum CPP Contribution: (@((FinancialDataService.FinancialStrategyModel.CPPMaxDeductionAmount / 12).ToString("C2")) per Month for Self-Employed & @((FinancialDataService.FinancialStrategyModel.CPPMaxDeductionAmount / 24).ToString("C2")) per Month for Employees)($):</RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="cppmaxcontribution" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value=@FinancialDataService.FinancialStrategyModel.CPPMaxDeductionAmount Min="0" ReadOnly="true" Style="background: #EDF1F7" />
+			</div>
+		</div>
+		<div class="row mb-2">
+			<div class="col-md-7">
+				<RadzenLabel for="cppaveragepayout" class="body-font-large-normal padding-left-20">Annual Average CPP Benefit Payout: (@((FinancialDataService.FinancialStrategyModel.AverageAmountForNewBeneficiaries / 12).ToString("C2")) per Month ($):</RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="cppaveragepayout" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value=@FinancialDataService.FinancialStrategyModel.AverageAmountForNewBeneficiaries Min="0" ReadOnly="true" Style="background: #EDF1F7" />
+			</div>
+		</div>
+		<div class="row mb-2">
+			<div class="col-md-7">
+				<RadzenLabel for="cppmaxpayout" class="body-font-large-normal padding-left-20">Annual Maximum CPP Benefit Payout: (@((FinancialDataService.FinancialStrategyModel.MaximumAmountForBeneficiaries / 12).ToString("C2")) per Month ($):</RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="cppmaxpayout" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value=@FinancialDataService.FinancialStrategyModel.MaximumAmountForBeneficiaries Min="0" ReadOnly="true" Style="background: #EDF1F7" />
+			</div>
+		</div>
+		<div class="row mb-2">
+			<div class="col-md-7">
+				<RadzenLabel for="replaceworkearningspercentage" class="body-font-large-normal padding-left-20">Replace Work Earnings Rate (%) <a href="https://lop.parl.ca/sites/PublicWebsite/default/en_CA/ResearchPublications/201940E/" style="font-size: small">(CPP Laws Designed to Replace ONLY 25% of Earnings (Updated to 33% of Earning After 2019). See Section 3.3)</a>: </RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="replaceworkearningspercentage" class="controlstretch" TValue="decimal" TextAlign="TextAlign.Center" @bind-Value=@FinancialDataService.FinancialStrategyModel.ReplaceWorkEarningsRate Min="0" Max="100" />
+			</div>
+		</div>
+		<div class="row mb-2">
+			<div class="col-md-7">
+				<RadzenLabel for="averagecpi" class="body-font-large-normal padding-left-20">Averge Annual CPI Change (%) <a href="https://www.rateinflation.com/consumer-price-index/canada-historical-cpi/" style="font-size: small">(Canada Historical CPI)</a>: </RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="averagecpi" class="controlstretch" TValue="decimal" TextAlign="TextAlign.Center" @bind-Value=@FinancialDataService.FinancialStrategyModel.AverageAnnualCPIChange Min="-100" Max="100" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="addcpptopayout" class="body-font-large-normal padding-left-20">Include Estimated CPP Contributions & Benefits in Salary/<span style="color: blue">Payout</span>:</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenCheckBox id="addcpptopayout" class="controlstretch" @bind-Value="IsCPPSelected" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="addoastopayout" class="body-font-large-normal padding-left-20">Include Estimated OAS Benefits in Salary/<span style="color: blue">Payout</span>:</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenCheckBox id="addoastopayout" class="controlstretch" Disabled="@(!IsCPPSelected)" @bind-Value="FinancialDataService.FinancialStrategyModel.CPPIDIncludeEstimatedOAS" />
+			</div>
+		</div>
+		<div class="row mb-2">
+			<div class="col-md-7">
+				<RadzenLabel for="agetoreceivecpp" class="body-font-large-normal padding-left-20">Age to start receiving CPP:</RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="agetoreceivecpp" class="controlstretch" TValue="int" TextAlign="TextAlign.Center" @bind-Value=@FinancialDataService.FinancialStrategyModel.CPPIDAgeToReceiveCPP Min="60" Max="100" ReadOnly="@(!IsCPPSelected)" Style="@DisabledNumericStyle" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12">
+				<hr class="table-divider" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12">
+				<hr class="table-divider-small" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12 body-font-large-bold">
+				Other Defined Benefit Pension Plan
+			</div>
+		</div>
+		<div class="row mb-2">
+			<div class="col-md-7">
+				<RadzenLabel for="dbpp" class="body-font-large-normal padding-left-20">Annual Maximum DBPP Payout starting Age @FinancialDataService.FinancialStrategyModel.AgeToStartPayouts:<span style="color: blue">++</span> (@((FinancialDataService.FinancialStrategyModel.TotalAnnualDefinedBenefitPensionPlan / 12).ToString("C2")) per Month ($):</RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="dbpp" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value=@FinancialDataService.FinancialStrategyModel.TotalAnnualDefinedBenefitPensionPlan Min="0" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="adddbpp" class="body-font-large-normal padding-left-20">Include Defined Benefit Pension Plan In Annual Payout:</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenCheckBox id="adddbpp" class="controlstretch" @bind-Value="FinancialDataService.FinancialStrategyModel.IncludeAnnualDefinedBenefitPensionPlan" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12">
+				<hr class="table-divider-small" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12 body-font-large-bold">
+				Other Signficant Income & Expenses to Chart
+			</div>
+		</div>
+		<div class="row mb-2">
+			<div class="col-md-7">
+				<RadzenLabel for="othersupincome" class="body-font-large-normal padding-left-20">Other Annual Passive Income: (@((FinancialDataService.FinancialStrategyModel.OtherAnnualPassiveIncome / 12).ToString("C2")) per Month ($):</RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="othersupincome" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value=@FinancialDataService.FinancialStrategyModel.OtherAnnualPassiveIncome Min="0" />
+			</div>
+		</div>
+		<div class="row mb-2">
+			<div class="col-md-7">
+				<RadzenLabel for="expenses" class="body-font-large-normal padding-left-20">Annual Cost of Living Expenses: (@((FinancialDataService.FinancialStrategyModel.AnnualCostOfLivingExpenses / 12).ToString("C2")) per Month ($):</RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="expenses" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value=@FinancialDataService.FinancialStrategyModel.AnnualCostOfLivingExpenses Min="0" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="addincomeexpense" class="body-font-large-normal padding-left-20">Include Other Income & Expenses In Annual Payout:</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenCheckBox id="addincomeexpense" class="controlstretch" @bind-Value="FinancialDataService.FinancialStrategyModel.IncludeOtherIncomeExpenses" />
+			</div>
+		</div>
+	</EditForm>
+
+	<p style="color:red;font-weight:bold;">@errorMessage</p>
+</div>

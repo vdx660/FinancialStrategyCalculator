@@ -1,0 +1,14 @@
+﻿@page "/"
+@layout MainLayout
+
+@using FinancialStrategyCalculator.Data
+
+@inject IJSRuntime JSRuntime
+@inject FinancialDataService financialDataService
+@inject DialogService DialogService
+@inject NavigationManager Navigation
+@inject TooltipService tooltipService
+
+<div class="container" style="margin-left: 0; position: relative; width: 100vw; height: 100vh;">
+    <img src="@item" />
+</div>

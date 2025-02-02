@@ -1,0 +1,133 @@
+﻿@page "/GeneralInfo"
+@layout MainLayout
+
+<div style="display: flex; justify-content: space-between">
+	<h3 style="font-weight: bold">General Information</h3>
+	<span class="sticky-right mr-3">
+		<RadzenButton Shade="Shade.Lighter" Text="Load" Icon="input" Click="@LoadProfile" IsBusy="@isBusy" class="ml-1" />
+		<RadzenButton Shade="Shade.Lighter" Text="Save" Icon="save" Click="@SaveProfile" IsBusy="@isBusy" class="ml-1" />
+		<RadzenButton Shade="Shade.Lighter" Icon="arrow_back_ios_new" ButtonStyle="ButtonStyle.Secondary" Text="  " Disabled="true" />
+		<RadzenButton Icon="arrow_forward_ios" ButtonStyle="ButtonStyle.Primary" Text="  " Click="@NextScreen" Disabled="Utility.SubmitDisabledState" />
+	</span>
+
+</div>
+
+@using FinancialStrategyCalculator.Data
+
+@inject IJSRuntime JSRuntime
+@inject FinancialDataService financialDataService
+@inject DialogService DialogService
+@inject NavigationManager Navigation
+@inject TooltipService tooltipService
+
+
+<div class="container-fluid" style="margin-left: 0;">
+	<EditForm Model="FinancialDataService.FinancialStrategyModel" OnValidSubmit="HandleValidSubmit">
+		<DataAnnotationsValidator />
+		<ValidationSummary />
+
+		<div class="row">
+			<div class="col-md-12">
+				<hr class="table-divider" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12">
+				<hr class="table-divider-invisible" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="yearperiod" class="body-font-large-bold">Year (Period):</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="yearperiod" class="controlstretch " TValue="int" TextAlign="TextAlign.Center" @bind-Value=@FinancialDataService.FinancialStrategyModel.Year Min="0" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="firstname" class="body-font-large-bold">First Name:<span style="color: red">**</span></label>
+			</div>
+			<div class="col-md-5">
+				<RadzenTextBox id="firstname" class="controlstretch" Style="border-color: blue; border-width: 2px" TValue="string" @bind-Value=@FinancialDataService.FinancialStrategyModel.FirstName />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="lastname" class="body-font-large-bold">Last Name:<span style="color: red">**</span></label>
+			</div>
+			<div class="col-md-5">
+				<RadzenTextBox id="lastname" class="controlstretch" Style="border-color: blue; border-width: 2px" TValue="string" @bind-Value=@FinancialDataService.FinancialStrategyModel.LastName />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="address" class="body-font-large-bold">Address:<span style="color: red">**</span></label>
+			</div>
+			<div class="col-md-5">
+				<RadzenTextArea id="address" class="controlstretch" Style="border-color: blue; border-width: 2px" TValue="string" @bind-Value=@FinancialDataService.FinancialStrategyModel.Address />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="birthdate" class="body-font-large-bold">Birthdate:<span style="color: red">**</span></label>
+			</div>
+			<div class="col-md-5">
+				<RadzenDatePicker id="birthdate" class="controlstretch" Style="border-color: blue; border-width: 2px" TValue="DateTime" DateFormat="d" @bind-Value=@FinancialDataService.FinancialStrategyModel.BirthDate Change=@OnBirthDateChange />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="age" class="body-font-large-bold">Age:<span style="color: red">**</span></label>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="age" class="controlstretch" Style="border-color: blue; border-width: 2px" TValue="int" TextAlign="TextAlign.Center" @bind-Value=@FinancialDataService.FinancialStrategyModel.Age Min="18" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="sex" class="body-font-large-bold">Gender At Birth:</label>
+			</div>
+			<div class="col-md-5">
+				<InputSelect id="sex" class="controlstretch" style="text-align: center" @bind-Value="FinancialDataService.FinancialStrategyModel.Sex">
+					<option value="1">Male</option>
+					<option value="2">Female</option>
+				</InputSelect>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<RadzenLabel for="annualincome" class="body-font-large-bold" MouseEnter="@(args => ShowTooltip(args, "currentincome"))">Estimated Annual Income [Used to compute Gov't Benefits (CPP/OAS)] ($):<span style="color: red">**</span></RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="annualincome" class="controlstretch" Style="border-color: blue; border-width: 2px" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value="FinancialDataService.FinancialStrategyModel.AnnualIncome" Min="0" Change="@AnnualIncomeChange" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<RadzenLabel for="annualincomeincrease" class="body-font-large-bold" MouseEnter="@(args => ShowTooltip(args, "incomecpi"))">Estimated Annual Income Percentage Increase (%):<span style="color: red">**</span></RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="annualincomeincrease" class="controlstretch" Style="border-color: blue; border-width: 2px" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value="FinancialDataService.FinancialStrategyModel.AnnualIncomePercentageIncrease" Min="0" Max="100" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<RadzenLabel for="projectedretirementincome" class="body-font-large-bold" MouseEnter="@(args => ShowTooltip(args, "annualpayout"))">Projected Annual Payout During Retirement ($@((FinancialDataService.FinancialStrategyModel.ProjectedAnnualRetirementIncome / 12).ToString("N2") + "/Month")):<span style="color: red">**</span></RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="projectedretirementincome" class="controlstretch" Style="border-color: blue; border-width: 2px" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value=@FinancialDataService.FinancialStrategyModel.ProjectedAnnualRetirementIncome Min="0" Change="@RetirementIncomeChange" />
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="col-md-12">
+				<hr class="table-divider" />
+			</div>
+		</div>
+
+	</EditForm>
+
+	<p style="color:red;font-weight:bold;">@errorMessage</p>
+</div>
+

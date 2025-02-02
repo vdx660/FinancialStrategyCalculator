@@ -1,0 +1,62 @@
+﻿@using FinancialStrategyCalculator.Data
+
+@inject IJSRuntime JSRuntime
+@inject FinancialDataService financialDataService
+@inject DialogService DialogService
+@inject NavigationManager Navigation
+@inject TooltipService tooltipService
+
+<div class="container" style="margin-left: 0;">
+	<EditForm Model="BankAndDumpDetails" OnSubmit="OKSubmit">
+		<DataAnnotationsValidator />
+		<ValidationSummary />
+
+		<div class="row">
+			<div class="col-md-7">
+				<label for="annualchangecontributions">Bank And Dump Amount:</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="annualchangecontributions" class="controlstretch" TValue="decimal" TextAlign="TextAlign.Right" Format="#,##0.00" Min="0" @bind-Value=@BankAndDumpDetails.BankAndDumpAmount />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="agetochange">Age to Stop:</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="agetochange" class="controlstretch" TValue="int" TextAlign="TextAlign.Right" @bind-Value=@BankAndDumpDetails.AgeToBankAndDump Min="18" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label style="font-size: small" for="onetimeincrease">Auto-Update:</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenCheckBox id="onetimeincrease" class="controlstretch" @bind-Value="BankAndDumpDetails.AutoUpdate" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label style="font-size: small" for="onetimeincrease">Clear Existing Entries:</label>
+			</div>
+			<div class="col-md-5">
+				<RadzenCheckBox id="onetimeincrease" class="controlstretch" @bind-Value="BankAndDumpDetails.ClearExistingEntries" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12">
+				<hr class="table-divider" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="row">
+				<div class="col-md-4">
+					<RadzenButton Text="OK" ButtonType="ButtonType.Submit" />
+				</div>
+				<div class="col-md-4">
+					<RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Secondary" Click="@CancelSubmit" />
+				</div>
+			</div>
+		</div>
+	</EditForm>
+</div>

@@ -1,0 +1,136 @@
+﻿@page "/Insurance"
+@layout MainLayout
+
+<div style="display: flex; justify-content: space-between">
+	<h3 style="font-weight: bold">Insurance</h3>
+	<span class="sticky-right mr-3">
+		<RadzenButton Shade="Shade.Lighter" Text="Load" Icon="input" Click="@LoadProfile" IsBusy="@isBusy" class="ml-1" />
+		<RadzenButton Shade="Shade.Lighter" Text="Save" Icon="save" Click="@SaveProfile" IsBusy="@isBusy" class="ml-1" />
+		<RadzenButton Shade="Shade.Darker" ButtonStyle="ButtonStyle.Success" IsBusy="@isBusy" Icon="cached" Text="  " Click="@(()=> GenerateGraphAsync(true))" class="ml-1" />
+		<RadzenButton Shade="Shade.Lighter" Icon="arrow_back_ios_new" ButtonStyle="ButtonStyle.Secondary" Text="  " Click="@BackScreenn" />
+		<RadzenButton Icon="arrow_forward_ios" ButtonStyle="ButtonStyle.Primary" Text="  " Click="@NextScreen" Disabled="Utility.SubmitDisabledState" />
+	</span>
+
+</div>
+
+@using FinancialStrategyCalculator.Data
+
+@inject IJSRuntime JSRuntime
+@inject FinancialDataService financialDataService
+@inject DialogService DialogService
+@inject NavigationManager Navigation
+@inject TooltipService tooltipService
+
+<div class="container-fluid" style="margin-left: 0;">
+	<EditForm Model="FinancialDataService.FinancialStrategyModel" OnValidSubmit="HandleValidSubmit">
+		<DataAnnotationsValidator />
+		<ValidationSummary />
+
+		<div class="row">
+			<div class="col-md-12">
+				<hr class="table-divider" />
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="col-md-7">
+				<label for="insurance" class="body-font-large-bold">Monthly Insurance Premium ($):<span style="color: red">**</span></label>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="insurance" class="controlstretch" Style="border-color: blue; border-width: 2px" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value=@FinancialDataService.FinancialStrategyModel.MonthlyInsurancePremium Min="0" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="faceamount" class="body-font-large-bold">Face Amount ($):<span style="color: red">**</span></label>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="faceamount" class="controlstretch" Style="border-color: blue; border-width: 2px" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value=@FinancialDataService.FinancialStrategyModel.FaceAmount Min="0" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="picklistterm" class="body-font-large-bold">Insurance Term Length:<span style="color: red">**</span></label>
+			</div>
+			<div class="col-md-5">
+				<InputSelect id="picklistterm" class="controlstretch" style="text-align:center; border-color: blue; border-width: 2px" @bind-Value="FinancialDataService.FinancialStrategyModel.TermLength">
+					<option value="100" default>None</option>
+					<option value="5">5</option>
+					<option value="10">10</option>
+					<option value="15">15</option>
+					<option value="20">20</option>
+					<option value="25">25</option>
+					<option value="30">30</option>
+					<option value="35">35</option>
+				</InputSelect>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<label for="continueinvestment" class="body-font-large-bold">Continue Investment After Insurance Term Ends?:<span style="color: red">**</span></label>
+			</div>
+			<div class="col-md-5">
+				<RadzenCheckBox id="continueinvestment" class="controlstretch" @bind-Value="FinancialDataService.FinancialStrategyModel.ContinueInvestment" Change="@((bool value) => HandleContinueInvestmentCheckboxChange(value))" />
+			</div>
+		</div>
+
+		@if (FinancialDataService.FinancialStrategyModel.ContinueInvestment)
+		{
+			<div class="row">
+				<div class="col-md-12">
+					<hr class="table-divider-small" />
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-7">
+					<label for="insuranceplan" class="body-font-large-bold">After Term Insurance (Exchange) Plan<span style="color: red">**</span></label>
+				</div>
+				<div class="col-md-5">
+					<InputSelect id="insuranceplan" class="controlstretch" style="border-color: blue; border-width: 2px" @bind-Value="FinancialDataService.FinancialStrategyModel.InsurancePlan">
+						<option value="1">Annual Increasing Premium Term to Age 100 Plan</option>
+						<option value="2">Decreasing Term to Age 100 Plan</option>
+						<option value="3">Ten (10) Year Fixed Then Decreasing Term to Age 100 Plan</option>
+					</InputSelect>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-6">
+					<RadzenLabel for="insurancetype" class="body-font-large-normal padding-left-20">DRT Insurance Type:</RadzenLabel>
+				</div>
+				<div class="col-md-1">
+					<RadzenCheckBox id="hasfileloaded" class="align-middle" @bind-Value="FinancialDataService.FinancialStrategyModel.HasDRTFileLoaded" Change="@((bool value) => RevertChangeDRT(value))" />
+				</div>
+				<div class="col-md-5">
+					<InputSelect id="insurancetype" class="controlstretch" @bind-Value="FinancialDataService.FinancialStrategyModel.InsuranceType">
+						<option value="1">Preferred Plus & Preferred</option>
+						<option value="2">Select and NTU (Not Taken Up)</option>
+						<option value="3">TU (Taken Up)</option>
+					</InputSelect>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-6">
+					<RadzenLabel for="insurancetype" class="body-font-large-normal padding-left-20">ART/YRT Insurance Type:</RadzenLabel>
+				</div>
+				<div class="col-md-1">
+					<RadzenCheckBox id="hasfileloaded" @bind-Value="FinancialDataService.FinancialStrategyModel.HasARTYRTFileLoaded" Change="@((bool value) => RevertChangeARTYRT(value))" />
+				</div>
+				<div class="col-md-5">
+					<InputSelect id="insurancetype" class="controlstretch" @bind-Value="FinancialDataService.FinancialStrategyModel.InsuranceType">
+						<option value="1">Preferred Plus & Preferred</option>
+						<option value="2">Select and NTU (Not Taken Up)</option>
+						<option value="3">TU (Taken Up)</option>
+					</InputSelect>
+				</div>
+			</div>
+		}
+
+		<div class="row">
+			<div class="col-md-12">
+				<hr class="table-divider" />
+			</div>
+		</div>
+	</EditForm>
+
+	<p style="color:red;font-weight:bold;">@errorMessage</p>
+</div>

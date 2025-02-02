@@ -1,0 +1,260 @@
+﻿@page "/Investment"
+@layout MainLayout
+
+<div style="display: flex; justify-content: space-between">
+    <h3 style="font-weight: bold">Investment</h3>
+    <span class="sticky-right mr-3">
+        <RadzenButton Shade="Shade.Lighter" Text="Load" Icon="input" Click="@LoadProfile" IsBusy="@isBusy" class="ml-1" />
+        <RadzenButton Shade="Shade.Lighter" Text="Save" Icon="save" Click="@SaveProfile" IsBusy="@isBusy" class="ml-1" />
+        <RadzenButton Shade="Shade.Darker" ButtonStyle="ButtonStyle.Success" IsBusy="@isBusy" Icon="cached" Text="  " Click="@(()=> GenerateGraphAsync(true))" class="ml-1" />
+        <RadzenButton Shade="Shade.Lighter" Icon="arrow_back_ios_new" ButtonStyle="ButtonStyle.Secondary" Text="  " Click="@BackScreenn" />
+        <RadzenButton Icon="arrow_forward_ios" ButtonStyle="ButtonStyle.Primary" Text="  " Click="@NextScreen" Disabled="Utility.SubmitDisabledState" />
+    </span>
+
+</div>
+
+
+@using FinancialStrategyCalculator.Data
+
+@inject IJSRuntime JSRuntime
+@inject FinancialDataService financialDataService
+@inject DialogService DialogService
+@inject NavigationManager Navigation
+@inject TooltipService tooltipService
+
+<style>
+    /* Overriding Radzen Styles for contributionDataGrid */
+    /* Will not work if addded to app.css */
+    /* For the data cells */
+    .rz-grid-table .rz-data-row td:not(:last-child) {
+        border-right: var(--rz-grid-frozen-cell-border);
+        border-right-width: 1px;
+        border-right-style: solid;
+    }
+
+    .rz-data-grid {
+        --rz-grid-header-text-transform: none;
+        --rz-grid-header-font-size: 8; /* Set this value to a desired font size */
+        --rz-grid-header-background-color: #F2F2F2;
+    }
+</style>
+
+<div id="investments" class="container-fluid" style="margin-left: 0;">
+    <EditForm Model="FinancialDataService.FinancialStrategyModel" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="row">
+            <div class="col-md-12">
+                <hr class="table-divider" />
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-7">
+                <label for="initialinvestment" class="body-font-large-bold">Initial Investment ($):<span style="color: red">**</span></label>
+            </div>
+            <div class="col-md-5">
+                <RadzenNumeric id="initialinvestment" class="controlstretch" Style="border-color: blue; border-width: 2px" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value=@FinancialDataService.FinancialStrategyModel.InitialInvestment Min="0.01m" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-7">
+                <label for="monthlyinvestment" class="body-font-large-bold">Monthly Investment ($):<span style="color: red">**</span></label>
+            </div>
+            <div class="col-md-5">
+                <RadzenNumeric id="monthlyinvestment" class="controlstretch" Style="border-color: blue; border-width: 2px" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value=@FinancialDataService.FinancialStrategyModel.MonthlyInvestment Min="0" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 body-font-large-bold">
+                Advanced Options:
+                <span>
+                    <RadzenCheckBox id="advancedinvestment" class="controlstretch" @bind-Value="advancedInvestmentVisibility" />
+                </span>
+            </div>
+        </div>
+        @if (AdvancedInvestmentVisibility)
+        {
+
+            <div class="row">
+                <div class="col-md-12 d-flex justify-content-between mb-2">
+                    <RadzenButton ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.ExtraSmall" Icon="add_circle_outline" Text="Add Entry" Click="@InsertAsync" />
+                    <RadzenButton Shade="Shade.Darker" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Medium" Icon="assessment" Text="Smart Recommendation" Click="@AIComputedAsync" />
+                </div>
+                <div class="col-md-12">
+                    <RadzenDataGrid id="contributionDataGrid" @ref="contributionChangesGrid" EditMode="DataGridEditMode.Single" TItem="ContributionChanges" Data="@contributionChangesList" EditRow="@editingItem" Style="margin-bottom: 10px;">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="ContributionChanges">
+                                <HeaderTemplate>
+                                    <span style="white-space: normal; text-align: center; font-weight: bold;">
+                                        Controls
+                                    </span>
+                                </HeaderTemplate>
+                                <Template Context="changes">
+                                    <RadzenButton Size="ButtonSize.ExtraSmall" Icon="edit" Text="Edit" Click="@(() => EditAsync(changes))" />
+                                    <RadzenButton Size="ButtonSize.ExtraSmall" Icon="delete" Text="Delete" Click="@(() => DeleteAsync(changes))" />
+                                </Template>
+                                <EditTemplate Context="changes">
+                                    <RadzenButton Shade="Shade.Darker" Size="ButtonSize.ExtraSmall" Icon="save" Text="Save" Click="@(() => UpdateAsync(changes))" />
+                                    <RadzenButton Shade="Shade.Darker" Size="ButtonSize.ExtraSmall" Icon="cancel" Text="Cancel" Click="@(() => CancelAsync(changes))" />
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="ContributionChanges" Property="AnnualChangesOnMonthlyContributions" HeaderCssClass="rz-text-align-center">
+                                <HeaderTemplate>
+                                    <span class="body-font-large-bold" style="white-space: normal; text-align: center;">
+                                        Adjust (+/-) on Investment Monthly Contributions
+                                    </span>
+                                </HeaderTemplate>
+                                <Template Context="changes">
+                                    <div style="text-align: right; font-size: medium;">
+                                        @changes.AnnualChangesOnMonthlyContributions.ToString("N2")
+                                    </div>
+                                </Template>
+                                <EditTemplate Context="changes">
+                                    <RadzenNumeric @bind-Value="changes.AnnualChangesOnMonthlyContributions" Format="#,##0.00" />
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="ContributionChanges" Property="AgeToStopChange" HeaderCssClass="rz-text-align-center">
+                                <HeaderTemplate>
+                                    <RadzenLabel class="body-font-large-bold" style="white-space: normal; text-align: center;" MouseEnter=@(args=> ShowTooltip(args, "startpayout"))>
+                                        Adjust Investment Until Specified Age
+                                    </RadzenLabel>
+                                </HeaderTemplate>
+                                <Template Context="changes">
+                                    <div style="text-align: center; font-size: medium;">
+                                        @changes.AgeToStopChange
+                                    </div>
+                                </Template>
+                                <EditTemplate Context="changes">
+                                    <RadzenNumeric @bind-Value="changes.AgeToStopChange" Min="0"></RadzenNumeric>
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-7">
+                    <label for="monthlyinvcpi" class="body-font-large-bold">Adjust Monthly Investments Based on Annual CPI:</label>
+                </div>
+                <div class="col-md-5">
+                    <RadzenCheckBox id="monthlyinvcpi" class="controlstretch" @bind-Value="@FinancialDataService.FinancialStrategyModel.UseCPIForMonthlyInvestment" />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-7">
+                    <label for="lowinterest" class="body-font-large-bold">Annual Interest Rate in % (Low Ave):</label>
+                </div>
+                <div class="col-md-5">
+                    <RadzenNumeric id="lowinterest" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Center" @bind-Value=@FinancialDataService.FinancialStrategyModel.AnnualInterestRateLow Min="0" Change="@AnnualIncomeChange" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-7">
+                    <label for="highinterest" class="body-font-large-bold">Annual Interest Rate in %(High Ave):</label>
+                </div>
+                <div class="col-md-5">
+                    <RadzenNumeric id="highinterest" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Center" @bind-Value=@FinancialDataService.FinancialStrategyModel.AnnualInterestRateHigh Min="FinancialDataService.FinancialStrategyModel.AnnualInterestRateLow" />
+                </div>
+            </div>
+        }
+
+        <div class="row">
+            <div class="col-md-12">
+                <hr class="table-divider-small" />
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-7">
+                <label for="age" class="body-font-large-bold">Age:<span style="color: red">**</span></label>
+            </div>
+            <div class="col-md-5">
+                <RadzenNumeric id="age" class="controlstretch" Style="border-color: blue; border-width: 2px" TValue="int" TextAlign="TextAlign.Center" @bind-Value=@FinancialDataService.FinancialStrategyModel.Age Min="18" Max="@(FinancialDataService.FinancialStrategyModel.AgeToStartPayouts - 1)" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-7">
+                <label for="agetopinvestment" class="body-font-large-bold">Age to Stop Investment Contribution & Start Annual Payout:</label>
+            </div>
+            <div class="col-md-5">
+                <RadzenNumeric id="agetopinvestment" class="controlstretch" TValue="int" TextAlign="TextAlign.Center" @bind-Value=@FinancialDataService.FinancialStrategyModel.AgeToStartPayouts Min="18" />
+            </div>
+        </div>
+        <div class="row mb-0">
+            <div class="col-md-7">
+                <label for="projectedretirementincome" class="body-font-large-bold">Projected Annual Payout During Retirement ($@((FinancialDataService.FinancialStrategyModel.ProjectedAnnualRetirementIncome / 12).ToString("N2") + "/Month")):<span style="color: red">**</span><span><RadzenButton Shade="Shade.Darker" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Small" Icon="assessment" Text="  " MouseEnter="@(args => ShowTooltip(args, "adjustpayouttononzero"))" Click="@AdjustPayout" /></span></label>
+            </div>
+            <div class="col-md-5">
+                <RadzenNumeric id="projectedretirementincome" class="controlstretch" Style="border-color: blue; border-width: 2px" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value=@FinancialDataService.FinancialStrategyModel.ProjectedAnnualRetirementIncome Min="0" />
+            </div>
+        </div>
+
+        <div class="row mb-2">
+            <div class="col-md-7">
+                <label for="highestmonthlyinvestment" class="body-font-large-bold">Highest Monthly Investment Contrtibution ($):</label>
+            </div>
+            <div class="col-md-5">
+                <RadzenNumeric id="highestmonthlyinvestment" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value="@HighestMonthlyInvestmentContrtibution" ReadOnly="true" Style="background: #EDF1F7" />
+            </div>
+        </div>
+        <div class="row mb-2">
+            <div class="col-md-7">
+                <label for="lastpayout" class="body-font-large-bold">Last Payout Amount @@ @LastPayoutAge Years of Age ($):</label>
+            </div>
+            <div class="col-md-5">
+                <RadzenNumeric id="lastpayout" class="controlstretch" TValue="decimal" Format="#,##0.00" TextAlign="TextAlign.Right" @bind-Value="@LastPayoutValue" ReadOnly="true" Style="background: #EDF1F7" />
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <hr class="table-divider-small" />
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-7">
+                <label for="addcpptopayout" class="body-font-large-bold">Include Estimated CPP Contributions & Benefits in Salary/<span style="color: blue">Payout</span>:</label>
+            </div>
+            <div class="col-md-5">
+                <RadzenCheckBox id="addcpptopayout" class="controlstretch" @bind-Value="IsCPPSelected" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-7">
+                <label for="addoastopayout" class="body-font-large-bold">Include Estimated OAS Benefits in Salary/<span style="color: blue">Payout</span>:</label>
+            </div>
+            <div class="col-md-5">
+                <RadzenCheckBox id="addoastopayout" class="controlstretch" Disabled="@(!IsCPPSelected)" @bind-Value="FinancialDataService.FinancialStrategyModel.CPPIDIncludeEstimatedOAS" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-7">
+                <RadzenLabel for="agetoreceivecpp" class="body-font-large-bold">Age to start receiving CPP/OAS &lt;= 65:</RadzenLabel>
+            </div>
+            <div class="col-md-5">
+                <RadzenNumeric id="agetoreceivecpp" class="controlstretch" TValue="int" TextAlign="TextAlign.Center" @bind-Value=@FinancialDataService.FinancialStrategyModel.CPPIDAgeToReceiveCPP Min="60" Max="100" ReadOnly="@(!IsCPPSelected)" Style="@DisabledNumericStyle" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-7">
+                <RadzenLabel for="investmenttargetage" class="body-font-large-bold" MouseEnter=@(args=> ShowTooltip(args, "startpayout"))>Life Expentancy Age:</RadzenLabel>
+            </div>
+            <div class="col-md-5">
+                <RadzenNumeric id="investmenttargetage" class="controlstretch" TValue="int" TextAlign="TextAlign.Center" @bind-Value=@FinancialDataService.FinancialStrategyModel.AgeToEndInvestment Min="18" />
+            </div>
+        </div>
+
+
+        <div class="row">
+            <div class="col-md-12">
+                <hr class="table-divider" />
+            </div>
+        </div>
+    </EditForm>
+
+    <p style="color:red;font-weight:bold;">@errorMessage</p>
+</div>

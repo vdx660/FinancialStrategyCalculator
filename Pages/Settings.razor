@@ -1,0 +1,191 @@
+﻿<h3>Settings</h3>
+
+@page "/Settings"
+
+@using FinancialStrategyCalculator.Data
+
+@inject IJSRuntime JSRuntime
+@inject FinancialDataService financialDataService
+@inject DialogService DialogService
+
+<div class="container-fluid" style="margin-left: 0;">
+    <div class="row">
+        <div class="col-md-12">
+            <hr class="table-divider" />
+        </div>
+    </div>
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <label for="detailedyearbyyear">Detailed Year-By-Year Interest Visibility Settings</label>
+        </div>
+        <div class="col-md-4">
+            <RadzenCheckBoxList @bind-Value=@Utility.YearByYearDetails TValue="int" Orientation=Orientation.Vertical class="mb-5">
+                <Items>
+                    <RadzenCheckBoxListItem Text="No Interest" Value="1" />
+                    <RadzenCheckBoxListItem Text="Low" Value="2" />
+                    <RadzenCheckBoxListItem Text="Average" Value="3" />
+                    <RadzenCheckBoxListItem Text="High" Value="4" />
+                </Items>
+            </RadzenCheckBoxList>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <hr class="table-divider-small" />
+        </div>
+    </div>
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <label for="monthlyinvestment">ART/YRT Insurance Data:</label>
+        </div>
+        <div class="col-md-4">
+            <RadzenFileInput Accept="*.xbl" class="controlstretch" TValue="string" Change="OnARTYRTFileChange" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <hr class="table-divider-small" />
+        </div>
+    </div>
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <label for="monthlyinvestment">DRT Insurance Data:</label>
+        </div>
+        <div class="col-md-4">
+            <RadzenFileInput Accept="*.xbl" class="controlstretch" TValue="string" Change="OnDRTFileChange" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <hr class="table-divider-small" />
+        </div>
+    </div>
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <label for="monthlyinvestment">TFSA/RRSP/FHSA Annual Rates:</label>
+        </div>
+        <div class="col-md-4">
+            <RadzenFileInput Accept="*.xbl" class="controlstretch" TValue="string" Change="OnTFSARRSPFHSAFileChange" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <hr class="table-divider-small" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-8">
+            <label for="cppcontributionlimit">CPP Contribution Limit:</label>
+        </div>
+        <div class="col-md-4">
+            <RadzenButton Text="Get CPP Contributions from Canada Federal Site" Click="@GetCPPContributionFromFedCAD" Disabled="IsCPPContributionDisabled" ButtonStyle="@((ButtonStyle)Utility.CPPContributionExisting)" />
+            <br /><br />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <label for="cppbenefits">Get Updated Results from Canada's CPP Contributions Website</label>
+            <br />
+            <b>Source: <a href="https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/payroll/payroll-deductions-contributions/canada-pension-plan-cpp/cpp-contribution-rates-maximums-exemptions.html">https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/payroll/payroll-deductions-contributions/canada-pension-plan-cpp/cpp-contribution-rates-maximums-exemptions.html</a></b>
+            <br />
+            <RadzenHtml>
+                @((MarkupString)HtmlContentCPPContribution)
+            </RadzenHtml>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <hr class="table-divider-small" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-8">
+            <label for="cppbenefits">CPP Benefits Limit:</label>
+        </div>
+        <div class="col-md-4">
+            <RadzenButton Text="Get CPP Payouts from Canada Federal Site" Click="@GetCPPBenefitPayoutFromFedCAD" Disabled="IsCPPPayoutDisabled" ButtonStyle="@((ButtonStyle)Utility.CPPBenefitsExisting)" />
+            <br /><br />
+            <RadzenDropDown id="cpppayouttype" class="controlstretch" Style="text-align: center;" TValue="int" Data="@CPPPayoutTypes" TextProperty="Text" ValueProperty="Id" @bind-Value="Utility.CPPPayoutDetails" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <label for="cppbenefits">Get Updated Results from Canada's CPP Payout Website</label>
+            <br />
+            <b>Source: <a href="https://www.canada.ca/en/services/benefits/publicpensions/cpp/payment-amounts.html">https://www.canada.ca/en/services/benefits/publicpensions/cpp/payment-amounts.html</a><br /></b>
+            <br />
+            <RadzenHtml>
+                @((MarkupString)HtmlContentCPPPayout)
+            </RadzenHtml>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <hr class="table-divider-small" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-8">
+            <label for="cppincdec">CPP Increase/Decrease Formula Website:</label>
+        </div>
+        <div class="col-md-4">
+            <RadzenButton Text="Get CPP Inc/Dec Formula from Canada Federal Site" Click="@GetCPPIncDecFormulaFromFedCAD" Disabled="IsCPPIDDisabled" ButtonStyle="@((ButtonStyle)Utility.CPPIncDecExisting)" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <label for="cppbenefits">Get Updated Results from Canada's CPP Website</label>
+            <br />
+            <b>Source: <a href="https://www.canada.ca/en/services/benefits/publicpensions/cpp/cpp-benefit/when-start.html">https://www.canada.ca/en/services/benefits/publicpensions/cpp/cpp-benefit/when-start.html</a><br /></b>
+            <br />
+            <RadzenHtml>
+                @((MarkupString)HtmlContentCPPID)
+            </RadzenHtml>
+            <br />
+            <b>Additional Reading: <a href="https://www.canada.ca/en/services/benefits/publicpensions/cpp/cpp-enhancement.html">CPP Enhancement & Maximum Contributions</a></b>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <hr class="table-divider-small" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-8">
+            <label for="oasbenefits">OAS Calculation Website:</label>
+        </div>
+        <div class="col-md-4">
+            <RadzenButton Text="Get OAS Calculation from Canada Federal Site" Click="@GetOASBenefitPayoutFromFedCAD" Disabled="IsOASDisabled" ButtonStyle="@((ButtonStyle)Utility.OASBenefitExisting)" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <label for="oasbenefits">Get Updated Results from Canada's OAS Website</label>
+            <br />
+            <b>Source: <a href="https://www.canada.ca/en/services/benefits/publicpensions/cpp/old-age-security/payments.html">https://www.canada.ca/en/services/benefits/publicpensions/cpp/old-age-security/payments.html</a><br /></b>
+            <br />
+            <RadzenHtml>
+                @((MarkupString)HtmlContentOAS)
+            </RadzenHtml>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <hr class="table-divider-small" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-8">
+            <label for="zoom">Adjust Font Size:</label>
+        </div>
+        <div class="col-md-4">
+            <RadzenButton Click="ZoomIn" Icon="zoom_in" Text="Zoom In" />
+            <RadzenButton Click="ZoomOut" Icon="zoom_out" Text="Zoom Out" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <hr class="table-divider" />
+        </div>
+    </div>
+</div>

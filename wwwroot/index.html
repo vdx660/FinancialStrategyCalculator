@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>FinancialStrategyCalculator</title>
+    <base href="/" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="css/bootstrap.min.css" />
+    <link href="css/app.css" rel="stylesheet" />
+    <link rel="stylesheet" href="_content/Radzen.Blazor/css/material-base.css">
+    <link href="FinancialStrategyCalculator.styles.css" rel="stylesheet" />
+</head>
+
+<body>
+
+    <div class="status-bar-safe-area"></div>
+
+    <div id="app">Loading...</div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+    <script src="_content/Plotly.Blazor/plotly-latest.min.js" type="text/javascript"></script>
+    <script src="_content/Plotly.Blazor/plotly-interop.js" type="text/javascript"></script>
+    <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script src="_framework/blazor.webview.js" autostart="false"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/html2canvas.min.js"></script>
+
+    <script>
+        //document.body.style.transform = "scale(0.95)";
+        //document.body.style.transformOrigin = "0 0";
+
+        window.loadFileClick = (element) => {
+            element.click();
+        }
+
+        function toggleColumn(columnClass) {
+            var elements = document.getElementsByClassName(columnClass);
+            for (var i = 0; i < elements.length; i++) {
+                if (elements[i].classList.contains('collapsed-column')) {
+                    elements[i].classList.remove('collapsed-column');
+                } else {
+                    elements[i].classList.add('collapsed-column');
+                }
+            }
+        }
+
+        function collapseColumn(columnClass) {
+            var elements = document.getElementsByClassName(columnClass);
+            for (var i = 0; i < elements.length; i++) {
+                if (!elements[i].classList.contains('collapsed-column')) {
+                    elements[i].classList.add('collapsed-column');
+                }
+            }
+        }
+
+        function getOuterHTML(selector) {
+            var element = document.querySelector(selector);
+            return element ? element.outerHTML : '';
+        }
+
+        function toggleNavMenu() {
+            var navMenu = document.getElementById("navMenuDiv");
+            navMenu.style.display = "block";
+        }
+
+        // Define a base height for finHeight
+        const baseWidthHeightRatio = 80; // This can be any starting value you prefer
+
+        function adjustHeight() {
+            var mainContainer = document.getElementById('main-container');
+            var currentScale = parseFloat(mainContainer.style.zoom) || 1;
+            var newFinWidthHeight = (baseWidthHeightRatio / currentScale);
+
+            // Use setProperty to include !important
+            if (mainContainer) {
+                mainContainer.style.setProperty('--finwidthheightratio', newFinWidthHeight, 'important');
+            }
+        }
+
+        function getScreenWidth() {
+            var mainContainer = document.getElementById('main-container');
+            var currentScale = parseFloat(mainContainer.style.zoom) || 1;
+            var newFinWidthHeight = (baseWidthHeightRatio / currentScale);
+            return window.innerWidth * newFinWidthHeight / 80;
+        }
+
+        function getScreenHeight() {
+            var mainContainer = document.getElementById('main-container');
+            var currentScale = parseFloat(mainContainer.style.zoom) || 1;
+            var newFinWidthHeight = (baseWidthHeightRatio / currentScale);
+            return window.innerHeight * newFinWidthHeight / 80;
+        }
+
+        window.zoomFunctions = {
+            zoomIn: function () {
+                var mainContainer = document.getElementById('main-container');
+                mainContainer.style.zoom = (parseFloat(mainContainer.style.zoom) || 1) + 0.05;
+                adjustHeight();
+            },
+            zoomOut: function () {
+                var mainContainer = document.getElementById('main-container');
+                mainContainer.style.zoom = (parseFloat(mainContainer.style.zoom) || 1) - 0.05;
+                adjustHeight();
+            }
+        };
+
+        window.takeScreenshot = async function (id) {
+            // Get the elements
+            const container = document.getElementById('planFinancialResultsModelRoot');
+            const tbody = document.querySelector('.scrollable-tbody');
+            const personNameDiv1 = document.getElementById('personname1');
+            const personNameDiv2 = document.getElementById('personname2');
+            const personNameDiv3 = document.getElementById('personname3');
+            const personNameDiv4 = document.getElementById('personname4');
+
+            // Store original styles
+            let originalContainerHeight, originalTbodyDisplay, originalTbodyMaxHeight;
+
+            // Adjust styles for the container if it exists
+            if (container) {
+                originalContainerHeight = container.style.height;
+                container.style.height = 'auto';
+            }
+
+            // Adjust styles for the tbody if it exists
+            if (tbody) {
+                originalTbodyDisplay = tbody.style.display;
+                originalTbodyMaxHeight = tbody.style.maxHeight;
+
+                tbody.style.display = 'table-row-group'; // Default display value for tbody
+                tbody.style.maxHeight = 'none';
+            }
+
+            // Show the personname div if it exists
+            if (personNameDiv1) {
+                originalPersonNameDisplay1 = personNameDiv1.style.display;
+                personNameDiv1.style.display = 'block';
+            }
+            if (personNameDiv2) {
+                originalPersonNameDisplay2 = personNameDiv2.style.display;
+                personNameDiv2.style.display = 'block';
+            }
+            if (personNameDiv3) {
+                originalPersonNameDisplay3 = personNameDiv3.style.display;
+                personNameDiv3.style.display = 'block';
+            }
+            if (personNameDiv4) {
+                originalPersonNameDisplay4 = personNameDiv4.style.display;
+                personNameDiv4.style.display = 'block';
+            }
+
+            var img = "";
+            await html2canvas(document.querySelector("#" + id)).then(canvas => img = canvas.toDataURL("image/jpg"));
+
+            // Revert styles back to original
+            if (container) {
+                container.style.height = originalContainerHeight;
+            }
+
+            if (tbody) {
+                tbody.style.display = originalTbodyDisplay;
+                tbody.style.maxHeight = originalTbodyMaxHeight;
+            }
+
+            // Hide the personname div again
+            if (personNameDiv1) {
+                personNameDiv1.style.display = originalPersonNameDisplay1;
+            }
+            if (personNameDiv2) {
+                personNameDiv2.style.display = originalPersonNameDisplay2;
+            }
+            if (personNameDiv3) {
+                personNameDiv3.style.display = originalPersonNameDisplay3;
+            }
+            if (personNameDiv4) {
+                personNameDiv4.style.display = originalPersonNameDisplay4;
+            }
+
+            var d = document.createElement("a");
+            d.href = img;
+            d.download = "image.jpg";
+            d.click();
+            return img;
+        }
+
+
+
+    </script>
+
+</body>
+
+</html>

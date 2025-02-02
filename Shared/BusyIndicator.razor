@@ -1,0 +1,76 @@
+﻿@inject BusyIndicatorService BusyService
+
+<div class="busy-overlay" style="display: @(IsBusy ? "block" : "none")">
+    <div class="busy-overlay">
+        <div class="busy-indicator">
+            <div class="spinner"></div>
+            <p class="loading-text">Generating Results...</p>
+            <p class="loading-text-secondary">This may take a minute or two...</p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .busy-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.6);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .busy-indicator {
+        text-align: center;
+        display: flex;
+        flex-direction: column; /* Stack children vertically */
+        align-items: center; /* Center children horizontally */
+        gap: 10px; /* Space between spinner and text */
+    }
+
+
+    .spinner {
+        border: 16px solid #f3f3f3;
+        border-top: 16px solid #3498db;
+        border-radius: 100%;
+        width: 100px;
+        height: 100px;
+        animation: spin 2s linear infinite;
+        margin-bottom: 10px; /* Space between spinner and text */
+    }
+
+    .loading-text {
+        font-size: 20px; /* Increase font size */
+        background-color: white; /* Solid background for text */
+        opacity: 75%;
+        padding: 5px 10px; /* Some padding for better appearance */
+        border-radius: 0px; /* Optional: Rounded corners for the text background */
+    }
+
+    .loading-text-secondary {
+        font-size: 14px; /* Increase font size */
+        background-color: white; /* Solid background for text */
+        opacity: 75%;
+        padding: 5px 10px; /* Some padding for better appearance */
+        border-radius: 0px; /* Optional: Rounded corners for the text background */
+    }
+
+    @@keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
+@code {
+    [Parameter]
+    public bool IsBusy { get; set; }
+}

@@ -1,0 +1,109 @@
+﻿@page "/PlanResult"
+@layout MainLayout
+
+<div style="display: flex; justify-content: space-between;">
+    <h3 style="font-weight: bold">Smartfolio Dashboard</h3>
+    <span class="sticky-right mr-3">
+        <RadzenButton Shade="Shade.Darker" ButtonStyle=" ButtonStyle.Info" Text="Export Results" Icon="print" Click="@PreviewButton" IsBusy="@isBusy" Disabled=@(!printPreviewState) class="ml-1" />
+        <RadzenButton Shade="Shade.Lighter" Text="Load" Icon="input" Click="@LoadProfile" IsBusy="@isBusy" class="ml-1" />
+        <RadzenButton Shade="Shade.Lighter" Text="Save" Icon="save" Click="@SaveProfile" IsBusy="@isBusy" class="ml-1" />
+        <RadzenButton Shade="Shade.Darker" ButtonStyle="ButtonStyle.Success" IsBusy="@isBusy" Icon="cached" Text="  " Click="@(()=> GenerateGraphAsync(true))" class="ml-1" />
+        <RadzenButton Shade="Shade.Lighter" Icon="arrow_back_ios_new" ButtonStyle="ButtonStyle.Secondary" Text="  " Click="@BackScreenn" />
+        <RadzenButton Icon="arrow_forward_ios" ButtonStyle="ButtonStyle.Primary" Text="  " Disabled="true" />
+    </span>
+</div>
+
+@using FinancialStrategyCalculator.Data
+
+@inject IJSRuntime JSRuntime
+@inject FinancialDataService financialDataService
+@inject DialogService DialogService
+@inject NavigationManager Navigation
+@inject TooltipService tooltipService
+
+<BusyIndicator IsBusy="@isBusy" />
+
+<div class="container-fluid" style="margin-left: 0;">
+    <div class="row">
+        <div class="col-sm-12">
+            <RadzenTabs id="rzTabComp" @ref="rzTabs" @bind-SelectedIndex="rzTabIndex" RenderMode="TabRenderMode.Client" Style="min-width: 80vw;">
+                <Tabs>
+                    <RadzenTabsItem Text="Income vs CPP" >
+                        <div id="planIncomeVsCPP">
+                            <div id="personname1" style="display:none">@("Name: " + FinancialDataService.FinancialStrategyModel.FirstName + " " + FinancialDataService.FinancialStrategyModel.LastName)</div>
+
+                            <div class="row">
+                                <div class="col-sm-12">
+                                    <PlotlyChart @bind-value="incCPPConfig" @bind-Layout="incCPPLayout" @bind-Data="incCPPData" @ref="incCPPChart" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-sm-12">
+                                    <span style="margin-left: 90px; color: black;">The CPP Payout Benefit Amount is based on the @FinancialDataService.FinancialStrategyModel.Year @CPPAnnualPayoutCalculation.</span><br />
+                                    <span style="margin-left: 90px; color: black;">This amount is adjusted based on the Average CPI Change of @FinancialDataService.FinancialStrategyModel.AverageAnnualCPIChange% yearly based on Canada's historical CPI average.</span><br />
+                                    <span style="font-weight: bold; margin-left: 90px; color: black;">For more information see links below:</span><br /><br />
+                                    <span style="margin-left: 90px; color: black;"><a href="https://www.canada.ca/en/services/benefits/publicpensions/cpp/payment-amounts.html">CPP: Pensions and benefits monthly amounts</a></span><br />
+                                    <span style="margin-left: 90px; color: black;"><a href="https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/payroll/payroll-deductions-contributions/canada-pension-plan-cpp/cpp-contribution-rates-maximums-exemptions.html">CPP contribution rates, maximums and exemptions</a></span><br />
+                                    <span style="margin-left: 90px; color: black;"><a href="https://www.rateinflation.com/consumer-price-index/canada-historical-cpi/">Canada Historical CPI</a></span><br />
+                                    <span style="margin-left: 90px; color: black;"><a href="https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/payroll/calculating-deductions/making-deductions/second-additional-cpp-contribution-rates-maximums.html#h_1">CPP enhancements or CPP2 Calculations</a></span><br />
+                                    <span style="margin-left: 90px; color: black;"><a href="https://lop.parl.ca/sites/PublicWebsite/default/en_CA/ResearchPublications/201940E/">CPP Designed to Replace Only 25% of Earnings (Updated to 33% of Earning After 2019). See Section 3.3</a></span><br />
+                                </div>
+                            </div>
+                        </div>
+                    </RadzenTabsItem>
+                    <RadzenTabsItem Text="Insurance&nbsp;vs&nbsp;Investment">
+                        <div id="planInsuranceInvestment">
+                            <div id="personname2" style="display:none">@("Name: " + FinancialDataService.FinancialStrategyModel.FirstName + " " + FinancialDataService.FinancialStrategyModel.LastName)</div>
+
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <PlotlyChart id="planInsuranceInvestmentChart1" @bind-value="insInvConfig" @bind-Layout="insInvLayout" @bind-Data="insInvData" @ref="insInvChart" />
+                                </div>
+                                <div class="col-sm-6">
+                                    <PlotlyChart id="planInsuranceInvestmentChart2" @bind-value="insFAveConfig" @bind-Layout="insFAveLayout" @bind-Data="insFAveData" @ref="insFAveInvAveChart" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <span style="font-size:small; font-weight: bold; margin-left: 0px; color: saddlebrown;">Starting Monthly Investment + Insurance Contribution: @FinancialDataService.FinancialResultsModel?.FirstOrDefault((a) => a.TotalContribution > 0)?.TotalContribution.ToString("C2") @@ Age: @FinancialDataService.FinancialResultsModel?.FirstOrDefault((a) => a.TotalContribution > 0)?.Age</span><br />
+                                    <span style="font-size:small; font-weight: bold; margin-left: 0px; color: saddlebrown;">Retirement Monthly Investment + Insurance Contribution: @FinancialDataService.FinancialResultsModel?.LastOrDefault((a) => a.MonthlyInvestment > 0)?.TotalContribution.ToString("C2") @@ Age: @FinancialDataService.FinancialResultsModel?.LastOrDefault((a) => a.MonthlyInvestment > 0)?.Age</span><br />
+                                </div>
+                                <div class="col-sm-6">
+                                    <span style="font-size:small; font-weight: bold; margin-left: 0px; color: green;">Starting Investment + Insurance Value: @((FinancialDataService.FinancialResultsModel?.FirstOrDefault((a) => a.TotalContribution > 0)?.AnnualCompoundedInvestmentAve + FinancialDataService.FinancialResultsModel?.FirstOrDefault((a) => a.TotalContribution > 0)?.FaceAmount)?.ToString("C2")) @@ Age: @FinancialDataService.FinancialResultsModel?.FirstOrDefault((a) => a.TotalContribution > 0)?.Age</span><br />
+                                    <span style="font-size:small; font-weight: bold; margin-left: 0px; color: green;">Retirement Investment + Insurance Value: @((FinancialDataService.FinancialResultsModel?.LastOrDefault((a) => a.MonthlyInvestment > 0)?.AnnualCompoundedInvestmentAve + FinancialDataService.FinancialResultsModel?.LastOrDefault((a) => a.MonthlyInvestment > 0)?.FaceAmount)?.ToString("C2")) @@ Age: @FinancialDataService.FinancialResultsModel?.LastOrDefault((a) => a.MonthlyInvestment > 0)?.Age</span><br />
+                                </div>
+                            </div>
+                        </div>
+                    </RadzenTabsItem>
+                    <RadzenTabsItem Text="Compounded Returns & Payout">
+                        <div id="planCompoundReturns">
+                            <div id="personname3" style="display:none">@("Name: " + FinancialDataService.FinancialStrategyModel.FirstName + " " + FinancialDataService.FinancialStrategyModel.LastName)</div>
+
+                            <div class="row">
+                                <div class="col-sm-12">
+                                    <PlotlyChart @bind-value="invForConfig" @bind-Layout="invForLayout" @bind-Data="invForData" @ref="invForChart" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-sm-12">
+                                    <span style="font-weight: bold; margin-left: 90px; font-size: small">Investment Period (Years): @(FinancialDataService.FinancialStrategyModel?.AgeToStartPayouts - FinancialDataService.FinancialStrategyModel?.Age)</span><br />
+                                    <span style="font-weight: bold; margin-left: 90px; font-size: small">Estimated RRIF Rate : @@ @FinancialDataService.FinancialStrategyModel?.RRIFRate% starting @@ @FinancialDataService.FinancialStrategyModel.AgeToMoveToRRIF years old</span><br />
+                                    <span style="font-weight: bold; margin-left: 90px; color: blue;">Starting Monthly Investment: @FinancialDataService.FinancialResultsModel?.FirstOrDefault((a) => a.MonthlyInvestment > 0)?.MonthlyInvestment.ToString("C2") @@ Age: @FinancialDataService.FinancialResultsModel?.FirstOrDefault((a) => a.MonthlyInvestment > 0)?.Age ; Ending Monthly Investment: @FinancialDataService.FinancialResultsModel?.LastOrDefault((a) => a.MonthlyInvestment > 0)?.MonthlyInvestment.ToString("C2") @@ Age: @FinancialDataService.FinancialResultsModel?.LastOrDefault((a) => a.MonthlyInvestment > 0)?.Age</span><br />
+                                    <span style="font-weight: bold; margin-left: 90px; color: brown; font-size: large">Estimated Retirement Payout: @FinancialDataService.FinancialStrategyModel?.ProjectedAnnualRetirementIncome.ToString("C2") Yearly or @((FinancialDataService.FinancialStrategyModel?.ProjectedAnnualRetirementIncome / 12)?.ToString("C2")) Monthly</span><br />
+                                    <span style="font-weight: bold; margin-left: 90px; color: red;">This Investment Strategy will only provide Payout until: @ProvidePaymentInYears </span><br />
+                                    <span style="font-weight: bold; margin-left: 90px; color: green; ">Free Insurance: @(FinancialDataService.FinancialStrategyModel?.InvestmentPayInsurance == true ? "YES! Starting from Age: " + ((FinancialDataService.FinancialStrategyModel?.Age + FinancialDataService.FinancialStrategyModel?.TermLength) <= FinancialDataService.FinancialStrategyModel?.AgeToMoveToRRIF ? FinancialDataService.FinancialStrategyModel?.Age + FinancialDataService.FinancialStrategyModel?.TermLength : FinancialDataService.FinancialStrategyModel?.AgeToMoveToRRIF + 1) : "No")</span><br />
+                                </div>
+                            </div>
+                        </div>
+                    </RadzenTabsItem>
+                    <RadzenTabsItem Text="Detailed&nbsp;Year-by-Year&nbsp;Plan">
+                        <div id="planFinancialResultsModelRoot">
+                            <div id="personname4" style="display:none">@("Name: " + FinancialDataService.FinancialStrategyModel.FirstName + " " + FinancialDataService.FinancialStrategyModel.LastName)</div>
+                            <PlanDetailsView @ref="planDetailsView" />
+                        </div>
+                    </RadzenTabsItem>
+                </Tabs>
+            </RadzenTabs>
+        </div>
+    </div>
+</div>

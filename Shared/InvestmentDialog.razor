@@ -1,0 +1,70 @@
+﻿@using FinancialStrategyCalculator.Data
+
+@inject IJSRuntime JSRuntime
+@inject FinancialDataService financialDataService
+@inject DialogService DialogService
+@inject NavigationManager Navigation
+@inject TooltipService tooltipService
+
+<div class="container" style="margin-left: 0;">
+	<EditForm Model="InvestmentDetails" OnSubmit="OKSubmit" >
+		<DataAnnotationsValidator />
+		<ValidationSummary />
+
+		<div class="row">
+			<div class="col-md-7">
+				<RadzenLabel for="annualchangecontributions" MouseEnter="@(args => ShowTooltip(args, "adjustcontributions"))">Adjust (+/-) Annual Monthly Contributions:</RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="annualchangecontributions" class="controlstretch" TValue="decimal" TextAlign="TextAlign.Right" Format="#,##0.00" @bind-Value=@InvestmentDetails.AnnualChangesOnMonthlyContributions />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<RadzenLabel for="agetochange" MouseEnter="@(args => ShowTooltip(args, "adjustuntilage"))">Adjust Until Specified Age:</RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenNumeric id="agetochange" class="controlstretch" TValue="int" TextAlign="TextAlign.Right" @bind-Value=@InvestmentDetails.AgeToStopChange Min="18" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<RadzenLabel style="font-size: small" for="onetimeadj" MouseEnter="@(args => ShowTooltip(args, "onetimeadj"))">One-Time Adjustment @@ Specified Age:</RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenCheckBox id="onetimeadj" class="controlstretch" @bind-Value="InvestmentDetails.OneTimeIncrease" Change="@((bool value) => OneTimeIncreaseChange(value))" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<RadzenLabel style="font-size: small" for="autoupdate" MouseEnter="@(args => ShowTooltip(args, "autoupdate"))">Auto-Update:</RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenCheckBox id="autoupdate" class="controlstretch" @bind-Value="InvestmentDetails.AutoUpdate" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-7">
+				<RadzenLabel style="font-size: small" for="clearentries" MouseEnter="@(args => ShowTooltip(args, "clearentries"))">Clear Existing Entries:</RadzenLabel>
+			</div>
+			<div class="col-md-5">
+				<RadzenCheckBox id="clearentries" class="controlstretch" @bind-Value="InvestmentDetails.ClearExistingEntries" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12">
+				<hr class="table-divider" />
+			</div>
+		</div>
+		<div class="row">
+			<div class="row">
+				<div class="col-md-4">
+					<RadzenButton Text="OK" ButtonType="ButtonType.Submit" />
+				</div>
+				<div class="col-md-4">
+					<RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Secondary" Click="@CancelSubmit" />
+				</div>
+			</div>
+		</div>
+	</EditForm>
+</div>
